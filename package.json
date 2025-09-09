@@ -1,6 +1,7 @@
 {
   "name": "CFWorkerACME",
   "scripts": {
+    "build": "",
     "dev-js": "tsx watch src/basic.ts",
     "build-js": "webpack --mode production",
     "deploy-js": "node dist/bundle.js",
