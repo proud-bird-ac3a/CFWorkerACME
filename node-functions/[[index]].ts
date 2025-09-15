@@ -7,7 +7,6 @@ import * as certs from '../src/certs';
 import {opDomain} from "../src/certs";
 import {cleanDNS} from "../src/query";
 
-
 // 绑定数据 ###############################################################################
 export type Bindings = {
     DB_CF: D1Database, MAIL_KEYS: string, MAIL_SEND: string, AUTH_KEYS: string,
@@ -80,7 +79,7 @@ app.use('/order/', async (c) => {
     let order_uuid: string = <string>c.req.query('id'); // 用户邮件
     let order_acts: string = <string>c.req.query('op'); // 执行操作
     let order_push: string = <string>c.req.query('cd'); // 执行操作
-    let user_email: string | undefined = local.getCookie(c, 'mail')
+    let user_email: string | undefined = local.getCookie(c, 'mail');
     if (!order_uuid) return c.json({"flags": 5, "texts": "订单ID不存在"}, 401);
     if (!user_email) return c.json({"flags": 4, "texts": "用户尚未登录"}, 401);
     // 读取数据 ============================================================================
@@ -132,9 +131,10 @@ app.use('/order/', async (c) => {
             } else if (order_acts === "rm_key") {
                 await saves.updateDB(c.env.DB_CF, "Apply", {keys: ""}, {uuid: order_uuid})
             } else if (order_acts === "ca_del") {
-                // todo 发起吊销
-            } else
+
+            } else {
                 return c.json({"flags": 5, "texts": "请求操作无效", "order": order_acts});
+            }
             return c.json({"flags": 0, "texts": "执行操作成功", "order": order_acts});
         }
     } catch (error) {
@@ -175,27 +175,27 @@ app.get('/tasks/', async (c) => {
     return c.json(result)
 })
 
-// 更新密钥 ###############################################################################
-app.use('/acmes/', async (c) => {
-    if (c.req.method !== 'POST') return c.json({"flags": 1, "texts": "请求方式无效"}, 400);
-    if (!await users.userAuth(c)) return c.json({"flags": 2, "texts": "用户尚未登录"}, 401);
-    let user_email: string | undefined = local.getCookie(c, 'mail')
-    let privateKey: string = <string>(await c.req.json())['privateKey'];
-    await saves.updateDB(c.env.DB_CF, "Users", {keys: privateKey}, {mail: user_email})
-    return c.json({"flags": 0, "texts": "更新ACME密钥成功"}, 200)
-})
+// // 更新密钥 ###############################################################################
+// app.use('/acmes/', async (c) => {
+//     if (c.req.method !== 'POST') return c.json({"flags": 1, "texts": "请求方式无效"}, 400);
+//     if (!await users.userAuth(c)) return c.json({"flags": 2, "texts": "用户尚未登录"}, 401);
+//     let user_email: string | undefined = local.getCookie(c, 'mail')
+//     let privateKey: string = <string>(await c.req.json())['privateKey'];
+//     await saves.updateDB(c.env.DB_CF, "Users", {keys: privateKey}, {mail: user_email})
+//     return c.json({"flags": 0, "texts": "更新ACME密钥成功"}, 200)
+// })
 
-// 删除账号 ###############################################################################
-app.use('/erase/', async (c) => {
-    if (c.req.method !== 'POST') return c.json({"flags": 1, "texts": "请求方式无效"}, 400);
-    if (!await users.userAuth(c)) return c.json({"flags": 2, "texts": "用户尚未登录"}, 401);
-    let user_email: string | undefined = local.getCookie(c, 'mail')
-    let post_email: string = <string>(await c.req.json())['email'];
-    if (user_email != post_email) return c.json({"flags": 5, "texts": "用户邮箱无效"}, 403);
-    await saves.deleteDB(c.env.DB_CF, "Apply", {mail: user_email})
-    await saves.deleteDB(c.env.DB_CF, "Users", {mail: user_email})
-    return c.json({"flags": 0, "texts": "删除账号成功"}, 200)
-})
+// // 删除账号 ###############################################################################
+// app.use('/erase/', async (c) => {
+//     if (c.req.method !== 'POST') return c.json({"flags": 1, "texts": "请求方式无效"}, 400);
+//     if (!await users.userAuth(c)) return c.json({"flags": 2, "texts": "用户尚未登录"}, 401);
+//     let user_email: string | undefined = local.getCookie(c, 'mail')
+//     let post_email: string = <string>(await c.req.json())['email'];
+//     if (user_email != post_email) return c.json({"flags": 5, "texts": "用户邮箱无效"}, 403);
+//     await saves.deleteDB(c.env.DB_CF, "Apply", {mail: user_email})
+//     await saves.deleteDB(c.env.DB_CF, "Users", {mail: user_email})
+//     return c.json({"flags": 0, "texts": "删除账号成功"}, 200)
+// })
 
 app.use('/clean/', async (c) => {
     const result: Record<string, any> = await cleanDNS(c.env);
