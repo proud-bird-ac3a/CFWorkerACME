@@ -79,8 +79,8 @@
                     <button type="button" class="btn btn-warning" onclick="passModify()">修改密码</button>
                     <button type="button" class="btn btn-danger" onclick="delAccount()">删除账号</button>
                     <br/><label id="code_act" style="margin-top: 15px">通过API获取证书示例: </label><br/><code>
-                    curl -X GET "http://<域名>/certs/<订单ID>?keys=<API密钥>" -H "Content-Type: application/json" -o res.json<br/>
-                    jq -r '.cert' res.json > /yours/path/cert.pem && jq -r '.keys' res.json > /yours/path/keys.pem</code>
+                    curl -X GET "https://域名/certs/订单ID?keys=API密钥" -H "Content-Type: application/json" -o res.json<br/>
+                    jq -r '.cert' res.json > /to/your/path/cert.pem && jq -r '.keys' res.json > /to/your/path/keys.pem</code>
                 </div>
             </div>
         </div>
