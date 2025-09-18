@@ -33,8 +33,8 @@
   "d1_databases": [
     {
       "binding": "DB_CF",
-      "database_name": "workacme-data",
-      "database_id": "4fc73571-0645-4319-ae63-42059fd4d2c6"
+      "database_name": "",
+      "database_id": "<database-id>"
     }
   ],
   "observability": {
