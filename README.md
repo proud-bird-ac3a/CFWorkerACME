@@ -16,25 +16,17 @@ SSL证书助手是一个免费、开源的全自动化SSL证书申请和下发�
 2. 支持手动验证和自动化验证（DCV代理），**只需设置一次CNAME记录一直可以使用**
 3. 支持`Let's Encrypt`、`ZeroSSL`、`Google Trust Service`、`SSL.com`等证书提供商
 
-### 需求背景
 
-- 有`acme.sh`了，为什么还需要`SSL证书助手`？
 
-  > 1、`acme.sh`脚本主要是给单机证书申请使用的，本平台是为了解决多服务器共用或者内网申请SSL证书的，可以通过网页或者API同步证书
-  >
-  > 2、`acme.sh`使用`TXT`验证或者申请通配符证书的时候，需要使用API Key或者手动设置，前者不够安全，后者麻烦，而`SSL证书助手`只需要设置一次CNAME记录即可永久使用
-  >
-  > 3、`acme.sh`并不是人人都熟悉，如果你比较喜欢`acme.sh`并且没有上面的需求，直接使用`acme.sh`就好了
 
-- 这个和`宝塔`或者`1Panel ` SSL证书申请有什么区别？
+## 使用方式
+### 一键部署
 
-  > 没什么区别，只是把申请验证过程移到了服务端，方便DCV代理和同步
 
-- 这个平台安全可靠吗
+|                   Cloudflare Worker 全球站                   |                                                                                                                                 EdgeOsne Functions 国际站                                                                                                                                 |                   EdgeOne Functions 中国站                   |
+| :----------------------------------------------------------: |:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:| :----------------------------------------------------------: |
+| [<img src="https://deploy.workers.cloudflare.com/button" alt="Deploy to Cloudflare Workers" style="width:400px;heigh:200px" />](https://deploy.workers.cloudflare.com/?url=https://github.com/PIKACHUIM/CFWorkerACMEs) | [<img src="https://cdnstatic.tencentcs.com/edgeone/pages/deploy.svg" alt="使用 EdgeOne Pages 部署" style="width:400px;heigh:200px" />](https://edgeone.ai/pages/new?project-name=oplist-api&repository-url=https://github.com/PIKACHUIM/CFWorkerACME&build-command=npm%20run%20build-eo&install-command=npm%20install&output-directory=public&root-directory=./) | [<img src="https://cdnstatic.tencentcs.com/edgeone/pages/deploy.svg" alt="使用 EdgeOne Pages 部署" style="width:400px;heigh:200px" />](https://console.cloud.tencent.com/edgeone/pages/new?project-name=oplist-api&repository-url=https://github.com/PIKACHUIM/CFWorkerACME&build-command=npm%20run%20build-eo&install-command=npm%20install&output-directory=public&root-directory=./) |
 
-  > 演示平台不会主动泄漏您的密钥或数据，但我认为安全性不如acme高
-  >
-  > 不过你可以使用自己的Cloudflare账号部署一个私有的实例，完全免费的
 
 ### 演示地址
 
@@ -43,29 +35,6 @@ SSL证书助手是一个免费、开源的全自动化SSL证书申请和下发�
 <img src="img/QQ20250506-153642.png" alt="QQ20250506-153642" style="zoom:50%;" />
 
 <img src="img/QQ20250506-153705.png" alt="QQ20250506-153705" style="zoom:67%;" />
-
-## 使用方式
-
-### 一键部署
-
-#### EdgeOne Functions 国际站
-[![使用 EdgeOne Pages 部署](https://cdnstatic.tencentcs.com/edgeone/pages/deploy.svg)](https://edgeone.ai/pages/new?project-name=oplist-api&repository-url=https://github.com/PIKACHUIM/CFWorkerACME&build-command=npm%20run%20build-eo&install-command=npm%20install&output-directory=public&root-directory=./)
-
-部署完成后，请登录[EdgeOne Functions后台](https://console.tencentcloud.com/edgeone/pages)，修改环境变量，请参考[变量说明](#变量说明)部分
-
-
-#### EdgeOne Functions 中国站
-[![使用 EdgeOne Pages 部署](https://cdnstatic.tencentcs.com/edgeone/pages/deploy.svg)](https://console.cloud.tencent.com/edgeone/pages/new?project-name=oplist-api&repository-url=https://github.com/PIKACHUIM/CFWorkerACME&build-command=npm%20run%20build-eo&install-command=npm%20install&output-directory=public&root-directory=./)
-
-部署完成后，请登录[EdgeOne Functions后台](https://console.cloud.tencent.com/edgeone/pages)，修改环境变量，请参考[变量说明](#变量说明)部分
-
-
-#### Cloudflare Worker 全球站
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/PIKACHUIM/CFWorkerACMEs)
-
-部署完成后，请登录[Cloudflare Worker后台](https://dash.cloudflare.com/)，修改环境变量，请参考[变量说明](#变量说明)部分
-
-
 
 
 ### 克隆代码
@@ -148,22 +117,21 @@ cp wrangler.example.jsonc wrangler.jsonc
 
 
 ### 测试代码
-
 ```shell
 npm install
 npm run dev
 ```
 
 ### 部署云端
-
-
 ```shell
 npm run deploy
 ```
 
 ## 备注说明
 
-1. `Let's Encrypt`在CloudFlare Worker上会抛出SSL连接失败问题，导致525错误，我们设置了一个代理到此供应商`https://encrys.524228.xyz/directory`，你可以使用nginx+下列参数代理：
+1. `Let's Encrypt`在CloudFlare Worker上会抛出SSL连接失败问题，导致525错误，
+   我们设置了一个代理到此供应商`https://encrys.524228.xyz/directory`，
+   你可以使用nginx+下列参数代理：
 
    ```nginx
    location ^~ /directory
@@ -199,10 +167,25 @@ npm run deploy
    }
    
    ```
+   
+### 常见问题
+
+- 有`acme.sh`了，为什么还需要`SSL证书助手`？
+  > 1、`acme.sh`脚本主要是给单机证书申请使用的，本项目是为了解决多服务器/内网共用SSL证书，可以通过网页或者API同步证书。
+  > 2、`acme.sh`使用`TXT`验证或者申请通配符证书的时候，而`SSL证书助手`只需要设置一次`CNAME`记录即可永久使用。
+  > 3、`acme.sh`并不是人人都熟悉，如果你比较喜欢`acme.sh`并且没有上述需求，直接使用`acme.sh`就好了。
+
+- 这个和`宝塔`或者`1Panel ` SSL证书申请有什么区别？
+  > 没什么区别，只是把申请验证过程移到了服务端，方便DCV代理和同步，
+  > 实际上这个平台更接近来此加密（https://lcjm.cc/） 的功能和模式
+
+- 这个平台安全可靠吗
+  > 演示平台不会主动泄漏您的密钥数据，但无法保证您的证书密钥完全安全。
+  > 不过你可以使用自己的Cloudflare账号部署一个私有的实例，完全开源的。
+
 
 ## 项目赞助
-本项目 CDN 加速及安全防护由 Tencent EdgeOne 赞助：EdgeOne 提供长期有效的免费套餐，包含不限量的流量和请求，覆盖中国大陆节点，且无任何超额收费，感兴趣的朋友可以点击下面的链接领取
-
+本项目 CDN 加速及安全防护由 Tencent EdgeOne 赞助：EdgeOne 提供长期有效的免费套餐，包含不限量的流量和请求，覆盖中国大陆节点，且无任何超额收费，感兴趣的朋友可以点击下面的链接领取：
 [亚洲最佳CDN、边缘和安全解决方案 - Tencent EdgeOne](https://edgeone.ai/zh?from=github)
 
 <img src="https://edgeone.ai/media/34fe3a45-492d-4ea4-ae5d-ea1087ca7b4b.png" alt="EdgeOne" style="width:400px" />
