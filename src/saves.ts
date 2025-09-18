@@ -71,8 +71,8 @@ export async function insertDB(
 
 // 查找数据 ################################################################################
 export async function selectDB(
-    DB: D1Database,
-    table: string, where: Record<string, {
+    DB: D1Database, table: string,
+    where: Record<string, {
         value: any,
         op?: string
     }>) {
@@ -104,7 +104,7 @@ export async function selectDB(
     if (conditions.length > 0) {
         sql += ' AND ' + conditions.join(' AND ');
     }
-
+    // console.log('where:', where);
     // console.log('SQL:', sql);
     // console.log('Params:', params);
 

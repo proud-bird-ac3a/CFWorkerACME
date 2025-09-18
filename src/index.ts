@@ -1,9 +1,10 @@
+import {Hono} from 'hono'
+import {opDomain} from "./certs";
+import {cleanDNS} from "./query";
 import * as users from './users';
 import * as saves from './saves';
 import * as certs from './certs';
 import * as local from "hono/cookie";
-import {Hono} from 'hono'
-import {opDomain} from "./certs";
 
 // 绑定数据 ###############################################################################
 export type Bindings = {
@@ -14,7 +15,6 @@ export type Bindings = {
     ZRO_keyMC: string, ZRO_keyID: string, ZRO_KeyTS: string, ZRO_useIt: string
 }
 export const app = new Hono<{ Bindings: Bindings }>()
-
 
 // 获取信息 ###############################################################################
 app.get('/users', async (c) => {
@@ -149,6 +149,7 @@ app.get('/login/', async (c) => {
     return users.userPost(c)
 })
 
+// 检查登录 ###############################################################################
 app.use('/check/', async (c) => {
     if (!await users.userAuth(c)) return c.json({"flags": 2, "texts": "用户尚未登录"}, 401);
     let user_email: string | undefined = local.getCookie(c, 'mail');
@@ -194,53 +195,86 @@ app.use('/erase/', async (c) => {
     return c.json({"flags": 0, "texts": "删除账号成功"}, 200)
 })
 
-
-import xior from 'xior';
-import {cleanDNS} from "./query";
-
-app.use('/fetch/', async (c) => {
-    try {
-        const response = await fetch("https://acme-v02.api.letsencrypt.org/directory");
-        const jsonData = await response.text();
-        console.log('Request Data:', jsonData);
-        return c.json({"flag": true, "data": jsonData})
-    } catch (err) {
-        console.error('Request Fail:', err);
-        return c.json({"flag": false, "data": err})
-    }
+// 更新密钥 ###############################################################################
+app.use('/token/', async (c) => {
+    if (c.req.method !== 'POST') return c.json({"flags": 1, "texts": "请求方式无效"}, 400);
+    if (!await users.userAuth(c)) return c.json({"flags": 2, "texts": "用户尚未登录"}, 401);
+    let user_email: string | undefined = local.getCookie(c, 'mail')
+    let apis_token: string = <string>(await c.req.json())['privateKey'];
+    await saves.updateDB(c.env.DB_CF, "Users", {apis: apis_token}, {mail: user_email})
+    return c.json({"flags": 0, "texts": "更新API TOKEN密钥成功"}, 200)
 })
 
-app.use('/xiors/', async (c) => {
-    let opts: Record<string, any> = {}
-    opts['url'] = "https://acme-v02.api.letsencrypt.org/directory";
-    opts["method"] = "GET";
-    console.log("Request URLs: " + opts.url)
-    try {
-        let resp = await xior.request(opts);
-        console.log("Request Data: " + resp)
-        return c.json({"flag": true, "data": resp})
-    } catch (err) {
-        console.error("Request Fail: " + err);
-        return c.json({"flag": false, "data": err})
-    }
+// 获取证书 ###############################################################################
+app.use('/certs/:uuid', async (c) => {
+    const cert_uuid: string | undefined = c.req.param('uuid');
+    const api_token: string | undefined = c.req.query('keys');
+    if (cert_uuid === undefined || api_token === undefined)
+        return c.json({"flags": 1, "texts": "证书订单ID或密钥无效"}, 400);
+    const now_order: any = await saves.selectDB(
+        c.env.DB_CF, "Apply", {uuid: {value: cert_uuid}});
+    if (now_order.length == 0)
+        return c.json({"flags": 3, "texts": "证书订单ID或密钥无效"}, 400);
+    const now_email: string = now_order[0]['mail'];
+    const now_users: any = await saves.selectDB(
+        c.env.DB_CF, "Users", {mail: {value: now_email}});
+    if (now_users.length == 0 || now_users[0]['apis'] != api_token)
+        return c.json({"flags": 3, "texts": "证书订单ID或密钥无效"}, 400);
+    if (now_order[0].cert.length == 0 || now_order[0].keys.length == 0)
+        return c.json({"flags": 4, "texts": "此订单未完成或无密钥"}, 400);
+    return c.json({
+        "flags": 0, "texts": "证书密钥信息获取成功",
+        "cert": now_order[0].cert, "keys": now_order[0].keys
+    }, 200)
 })
 
-app.use('/encry/', async (c) => {
-    try {
-        const response = await fetch("https://encrys.524228.xyz/directory");
-        const jsonData = await response.json();
-        console.log('Request Data:', jsonData);
-        return c.json({"flag": true, "data": jsonData})
-    } catch (err) {
-        console.error('Request Fail:', err);
-        return c.json({"flag": false, "data": err})
-    }
-})
-
+// 定时任务 ##############################################################################
 app.use('/clean/', async (c) => {
     const result: Record<string, any> = await cleanDNS(c.env);
     return c.json({"flag": result.flag, "text": result.text})
 })
+
+
+// import xior from 'xior';
+//
+// app.use('/fetch/', async (c) => {
+//     try {
+//         const response = await fetch("https://acme-v02.api.letsencrypt.org/directory");
+//         const jsonData = await response.text();
+//         console.log('Request Data:', jsonData);
+//         return c.json({"flag": true, "data": jsonData})
+//     } catch (err) {
+//         console.error('Request Fail:', err);
+//         return c.json({"flag": false, "data": err})
+//     }
+// })
+//
+// app.use('/xiors/', async (c) => {
+//     let opts: Record<string, any> = {}
+//     opts['url'] = "https://acme-v02.api.letsencrypt.org/directory";
+//     opts["method"] = "GET";
+//     console.log("Request URLs: " + opts.url)
+//     try {
+//         let resp = await xior.request(opts);
+//         console.log("Request Data: " + resp)
+//         return c.json({"flag": true, "data": resp})
+//     } catch (err) {
+//         console.error("Request Fail: " + err);
+//         return c.json({"flag": false, "data": err})
+//     }
+// })
+//
+// app.use('/encry/', async (c) => {
+//     try {
+//         const response = await fetch("https://encrys.524228.xyz/directory");
+//         const jsonData = await response.json();
+//         console.log('Request Data:', jsonData);
+//         return c.json({"flag": true, "data": jsonData})
+//     } catch (err) {
+//         console.error('Request Fail:', err);
+//         return c.json({"flag": false, "data": err})
+//     }
+// })
 
 
 // 定时任务 ############################################################################################################

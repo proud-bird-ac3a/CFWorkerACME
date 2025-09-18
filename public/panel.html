@@ -14,7 +14,7 @@
 <body>
 <div class="container">
     <div id="sides-bar"></div>
-    <div class="content" style="min-height: 866px">
+    <div class="content" style="min-height: 900px">
         <div class="main-content">
             <div class="form-section">
                 <h2>证书统计</h2>
@@ -54,21 +54,33 @@
                 </table>
             </div>
             <div class="form-section">
-                <h2 onclick="toggleSection('acme-section')" style="cursor: pointer;">ACME账号 <span id="acme-arrow">▼</span></h2>
+                <h2 onclick="toggleSection('acme-section')" style="cursor: pointer;">ACME账号 <span
+                        id="acme-arrow">▼</span></h2>
                 <div id="acme-section" style="display: none">
                     <br/>
-                    <textarea rows="5" id="acme_key" style="margin-bottom: 10px" placeholder="留空则不更改"></textarea>
+                    <textarea rows="2" id="acme_key" placeholder="留空则不更改"></textarea>
                     <button type="button" class="btn btn-info" onclick="newECCP256()">随机生成</button>
-                    <button type="button" class="btn btn-success" onclick="postSubmit()">应用更改</button>
+                    <button type="button" class="btn btn-success" onclick="postSubmit('acme_key','acmes')">应用更改
+                    </button>
                 </div>
             </div>
-
             <div class="form-section">
-                <h2 onclick="toggleSection('user-section')" style="cursor: pointer;">用户操作 <span id="user-arrow">▼</span></h2>
+                <h2 onclick="toggleSection('user-section')" style="cursor: pointer;">用户操作 <span
+                        id="user-arrow">▼</span></h2>
                 <div id="user-section" style="display: none">
                     <br/>
+                    <label for="apis_key">API 密钥: </label>
+                    <input id="apis_key" class="form-control" style="display: unset;width: auto;max-width: 240px"
+                           placeholder="留空则不更改"></input>
+                    <button type="button" class="btn btn-info" onclick="newAPIKeys()">随机生成</button>
+                    <button type="button" class="btn btn-success" onclick="postSubmit('apis_key','token')">应用更改
+                    </button>
+                    <label id="user_act">账号操作: </label>
                     <button type="button" class="btn btn-warning" onclick="passModify()">修改密码</button>
                     <button type="button" class="btn btn-danger" onclick="delAccount()">删除账号</button>
+                    <br/><label id="code_act" style="margin-top: 15px">通过API获取证书示例: </label><br/><code>
+                    curl -X GET "http://<域名>/certs/<订单ID>?keys=<API密钥>" -H "Content-Type: application/json" -o res.json<br/>
+                    jq -r '.cert' res.json > /yours/path/cert.pem && jq -r '.keys' res.json > /yours/path/keys.pem</code>
                 </div>
             </div>
         </div>
@@ -78,7 +90,7 @@
 <script>
     function toggleSection(sectionId) {
         var section = document.getElementById(sectionId);
-        var arrow = document.getElementById(sectionId + '-arrow');
+        var arrow = document.getElementById(sectionId.split('-')[0] + '-arrow');
 
         if (section.style.display === "none") {
             section.style.display = "block";
@@ -92,6 +104,16 @@
 <script>
     srtGravatar("panel");
     numOrders();
+
+    // 填充APIS密钥 ===========================================================================
+    async function newAPIKeys() {
+        try {
+            document.getElementById("apis_key").value = Math.random().toString(36).slice(2);
+        } catch (error) {
+            console.error("生成密钥失败:", error);
+            throw error;
+        }
+    }
 
     // 填充ACME密钥 ===========================================================================
     async function newECCP256() {
@@ -125,9 +147,9 @@
     // 提交ACME密钥 ===========================================================================
     const xhr = new XMLHttpRequest();
 
-    async function postSubmit() {
-        const acme_key = document.getElementById("acme_key").value
-        if (acme_key.length <= 200) {
+    async function postSubmit(update_name, update_path) {
+        const acme_key = document.getElementById(update_name).value
+        if (acme_key.length <= 5) {
             Swal.fire({
                 icon: 'error',
                 title: '请先填写或者生成新的ACME密钥',
@@ -136,16 +158,31 @@
             });
             return false;
         }
-        const {isConfirmed} = await Swal.fire({
-            title: '确认更新密钥',
-            text: '您将无法使用之前的密钥吊销已申请的证书',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: '更新密钥',
-            cancelButtonText: '取消',
-        })
-        if (!isConfirmed) return;
-        xhr.open('POST', '/acmes/', false); // 第三个参数设置为 false 表示同步请求
+        if (update_path === 'acmes') {
+            let {isConfirmed} = await Swal.fire({
+                title: '确认更新ACME私钥',
+                text: '您将无法使用之前的密钥吊销已申请的证书' +
+                    '\n注意：此密钥在离开本页面后不可再次查看',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: '更新密钥',
+                cancelButtonText: '取消',
+            })
+            if (!isConfirmed) return;
+        } else if (update_path === 'token') {
+            let {isConfirmed} = await Swal.fire({
+                title: '确认更新API密钥',
+                text: '如果您设置了自动更新，需要同步更换密钥' +
+                    '\n注意：此密钥在离开本页面后不可再次查看',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: '更新密钥',
+                cancelButtonText: '取消',
+            })
+            if (!isConfirmed) return;
+        }
+
+        xhr.open('POST', update_path + "/", false); // 第三个参数设置为 false 表示同步请求
         xhr.setRequestHeader('Content-Type', 'application/json');
         const data = {
             privateKey: acme_key,
@@ -245,7 +282,7 @@
     // 修改用户密码 ===========================================================================
     function passModify() {
         const email = document.getElementById("user-emails").innerText
-        window.location.href = "/login.html?changers=1&emails="+email;
+        window.location.href = "/login.html?changers=1&emails=" + email;
     }
 </script>
 </body>
