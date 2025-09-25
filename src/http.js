@@ -2,10 +2,11 @@
  * ACME HTTP client
  */
 
-const { createHmac, createSign, constants: { RSA_PKCS1_PADDING } } = require('crypto');
-const { getJwk } = require('./crypto');
-const { log } = require('./logger');
+const {createHmac, createSign, constants: {RSA_PKCS1_PADDING}} = require('crypto');
+const {getJwk} = require('./crypto');
+const {log} = require('./logger');
 const axios = require('./axios');
+import xior from 'xior';
 
 /**
  * ACME HTTP client
@@ -44,22 +45,29 @@ class HttpClient {
     async request(url, method, opts = {}) {
         opts.url = url;
         opts.method = method;
-        opts.adapter = "fetch"
         opts.validateStatus = null;
+        console.log("Request URL: " + opts.url)
         /* Headers */
         if (typeof opts.headers === 'undefined') {
             opts.headers = {};
         }
+
         opts.headers['Content-Type'] = 'application/jose+json';
 
         /* Request */
         log(`HTTP request: ${method} ${url}`);
-        const resp = await axios.request(opts);
+        // const resp = await axios.request(opts);
+        let resp = await xior.request(opts);
+        const headers = {};
+        for (const [key, value] of resp.headers) {
+            headers[key] = value;
+        }
+        resp.headers = headers
 
         log(`RESP ${resp.status} ${method} ${url}`);
+        // return new_resp;
         return resp;
     }
-
     /**
      * Get ACME provider directory
      *
@@ -116,7 +124,7 @@ class HttpClient {
     async getNonce() {
         const url = await this.getResourceUrl('newNonce');
         const resp = await this.request(url, 'head');
-
+        // console.log(resp.headers,resp.headers['replay-nonce']);
         if (!resp.headers['replay-nonce']) {
             throw new Error('Failed to get nonce from ACME provider');
         }
@@ -170,8 +178,8 @@ class HttpClient {
      * @returns {object} Signed HTTP request body
      */
 
-    prepareSignedBody(alg, url, payload = null, { nonce = null, kid = null } = {}) {
-        const header = { alg, url };
+    prepareSignedBody(alg, url, payload = null, {nonce = null, kid = null} = {}) {
+        const header = {alg, url};
 
         /* Nonce */
         if (nonce) {
@@ -182,8 +190,7 @@ class HttpClient {
         /* KID or JWK */
         if (kid) {
             header.kid = kid;
-        }
-        else {
+        } else {
             header.jwk = this.getJwk();
         }
 
@@ -206,8 +213,8 @@ class HttpClient {
      * @returns {object} Signed HMAC request body
      */
 
-    createSignedHmacBody(hmacKey, url, payload = null, { nonce = null, kid = null } = {}) {
-        const result = this.prepareSignedBody('HS256', url, payload, { nonce, kid });
+    createSignedHmacBody(hmacKey, url, payload = null, {nonce = null, kid = null} = {}) {
+        const result = this.prepareSignedBody('HS256', url, payload, {nonce, kid});
 
         /* Signature */
         const signer = createHmac('SHA256', Buffer.from(hmacKey, 'base64')).update(`${result.protected}.${result.payload}`, 'utf8');
@@ -229,7 +236,7 @@ class HttpClient {
      * @returns {object} JWS request body
      */
 
-    createSignedBody(url, payload = null, { nonce = null, kid = null } = {}) {
+    createSignedBody(url, payload = null, {nonce = null, kid = null} = {}) {
         const jwk = this.getJwk();
         let headerAlg = 'RS256';
         let signerAlg = 'SHA256';
@@ -241,15 +248,14 @@ class HttpClient {
             if (jwk.crv === 'P-384') {
                 headerAlg = 'ES384';
                 signerAlg = 'SHA384';
-            }
-            else if (jwk.crv === 'P-521') {
+            } else if (jwk.crv === 'P-521') {
                 headerAlg = 'ES512';
                 signerAlg = 'SHA512';
             }
         }
 
         /* Prepare body and signer */
-        const result = this.prepareSignedBody(headerAlg, url, payload, { nonce, kid });
+        const result = this.prepareSignedBody(headerAlg, url, payload, {nonce, kid});
         const signer = createSign(signerAlg).update(`${result.protected}.${result.payload}`, 'utf8');
 
         /* Signature - https://stackoverflow.com/questions/39554165 */
@@ -277,7 +283,11 @@ class HttpClient {
      * @returns {Promise<object>} HTTP response
      */
 
-    async signedRequest(url, payload, { kid = null, nonce = null, includeExternalAccountBinding = false } = {}, attempts = 0) {
+    async signedRequest(url, payload, {
+        kid = null,
+        nonce = null,
+        includeExternalAccountBinding = false
+    } = {}, attempts = 0) {
         if (!nonce) {
             nonce = await this.getNonce();
         }
@@ -289,13 +299,13 @@ class HttpClient {
                 const eabKid = this.externalAccountBinding.kid;
                 const eabHmacKey = this.externalAccountBinding.hmacKey;
 
-                payload.externalAccountBinding = this.createSignedHmacBody(eabHmacKey, url, jwk, { kid: eabKid });
+                payload.externalAccountBinding = this.createSignedHmacBody(eabHmacKey, url, jwk, {kid: eabKid});
             }
         }
 
         /* Sign body and send request */
-        const data = this.createSignedBody(url, payload, { nonce, kid });
-        const resp = await this.request(url, 'post', { data });
+        const data = this.createSignedBody(url, payload, {nonce, kid});
+        const resp = await this.request(url, 'post', {data});
 
         /* Retry on bad nonce - https://datatracker.ietf.org/doc/html/rfc8555#section-6.5 */
         if (resp.data && resp.data.type && (resp.status === 400) && (resp.data.type === 'urn:ietf:params:acme:error:badNonce') && (attempts < this.maxBadNonceRetries)) {
@@ -303,7 +313,7 @@ class HttpClient {
             attempts += 1;
 
             log(`Caught invalid nonce error, retrying (${attempts}/${this.maxBadNonceRetries}) signed request to: ${url}`);
-            return this.signedRequest(url, payload, { kid, nonce, includeExternalAccountBinding }, attempts);
+            return this.signedRequest(url, payload, {kid, nonce, includeExternalAccountBinding}, attempts);
         }
 
         /* Return response */

@@ -6,6 +6,7 @@ import * as agent from "./agent";
 import * as query from "./query";
 import {Bindings} from './index'
 import {hmacSHA2} from "./users";
+import {errors} from "wrangler";
 
 
 const acme_url_map: Record<string, any> = {
@@ -52,7 +53,9 @@ export async function newApply(env: Bindings, order_user: any, order_info: any) 
         await saves.updateDB(env.DB_CF, "Apply", {data: orders_data}, {uuid: order_info['uuid']})
     } catch (e) {
         console.error(e);
-        return {"texts": e};
+        throw e;
+        // return {"texts": e};
+
     }
     return {"texts": "处理成功"};
     // ==============================================================================================
@@ -303,8 +306,14 @@ async function getStart(env: Bindings, order_user: any, order_info: any) {
                 contact: ['mailto:' + order_user['mail']],
             });
         } catch (e) {
-            console.error(e);
-            return null
+            if (e instanceof Error) {
+                console.error("Error stack:", e.stack);
+                console.error("Error message:", e.message);
+            } else {
+                console.error("An unknown error occurred:", e);
+            }
+            throw e;
+            // return null
         }
     }
     return client_data;

@@ -87,7 +87,7 @@ app.use('/order/', async (c) => {
             order_data = await saves.selectDB(c.env.DB_CF, "Apply", {
                 mail: {value: user_email}
             });
-            console.log(user_email, order_data)
+            // console.log(user_email, order_data)
         } else {
             order_data = await saves.selectDB(c.env.DB_CF, "Apply", {
                 uuid: {value: order_uuid},
@@ -278,18 +278,4 @@ app.use('/clean/', async (c) => {
 
 
 // 定时任务 ############################################################################################################
-export default {
-    app,
-    async fetch(request: Request, env: Bindings, ctx: ExecutionContext) {
-        return app.fetch(request, env, ctx);
-    },
-    async scheduled(controller: ScheduledController, env: Bindings, ctx: ExecutionContext) {
-        if (!controller) console.log(controller, ctx)
-        console.log('Cron job is going to process');
-        try {
-            await certs.Processing(env);
-        } catch (error) {
-            console.error('Error when process cron jobs', error);
-        }
-    },
-};
+export default app;
