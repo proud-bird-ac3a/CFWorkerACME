@@ -78,9 +78,7 @@
                     <label id="user_act">账号操作: </label>
                     <button type="button" class="btn btn-warning" onclick="passModify()">修改密码</button>
                     <button type="button" class="btn btn-danger" onclick="delAccount()">删除账号</button>
-                    <br/><label id="code_act" style="margin-top: 15px">通过API获取证书示例: </label><br/><code>
-                    curl -X GET "https://域名/certs/订单ID?keys=API密钥" -H "Content-Type: application/json" -o res.json<br/>
-                    jq -r '.cert' res.json > /to/your/path/cert.pem && jq -r '.keys' res.json > /to/your/path/keys.pem</code>
+                    <br/><label id="code_act" style="margin-top: 15px">通过API获取证书示例: </label><br/><code id="api_example"></code>
                 </div>
             </div>
         </div>
@@ -105,7 +103,7 @@
     srtGravatar("panel");
     numOrders();
 
-    // 填充APIS密钥 ===========================================================================
+    // 填充APIS密钥 ==========================================================================
     async function newAPIKeys() {
         try {
             document.getElementById("apis_key").value = Math.random().toString(36).slice(2);
@@ -209,13 +207,22 @@
             }
         } else {
             Swal.fire({
-                icon: 'info',
-                title: '更新ACME密钥失败\n' + xhr.status,
+                icon: 'error',
+                title: '网络错误或服务器不可达',
                 showConfirmButton: false,
                 timer: 1000
             });
         }
     }
+
+    // 动态填充 API 示例域名
+    (function fillApiExample() {
+        var origin = window.location.origin;
+        var el = document.getElementById('api_example');
+        if (el) {
+            el.innerHTML = `curl -X GET "${origin}/certs/订单ID?keys=API密钥" -H "Content-Type: application/json" -o res.json<br/>jq -r '.cert' res.json > /to/your/path/cert.pem && jq -r '.keys' res.json > /to/your/path/keys.pem`;
+        }
+    })();
 
     // 删除当前账号 ===========================================================================
     function delAccount() {

@@ -1,5 +1,4 @@
-import {Hono} from 'hono'
-import {cors} from "hono/cors";
+import {Context, Hono} from 'hono'
 import * as local from "hono/cookie";
 import * as users from '../src/users';
 import * as saves from '../src/saves';
@@ -17,25 +16,24 @@ export type Bindings = {
 }
 export const app = new Hono<{ Bindings: Bindings }>()
 
-
 // 获取信息 ###############################################################################
-app.get('/users', async (c) => {
+app.get('/users/', async (c: Context): Promise<Response> => {
     return c.json({})
 });
 
 // 获取种子 ###############################################################################
-app.get('/nonce/', async (c) => {
+app.get('/nonce/', async (c: Context): Promise<Response> => {
     return await users.getNonce(c);
 });
 
 // 核查状态 ###############################################################################
-app.get('/panel/', async (c) => {
+app.get('/panel/', async (c: Context): Promise<Response> => {
     if (!await users.userAuth(c)) c.redirect("/login.html", 302);
     return c.redirect("/panel.html", 302);
 })
 
 // 申请证书 ###############################################################################
-app.use('/apply/', async (c) => {
+app.use('/apply/', async (c: Context): Promise<Response> => {
     if (c.req.method !== 'POST') return c.json({"flags": 1, "texts": "请求方式无效"}, 400);
     if (!await users.userAuth(c)) return c.json({"flags": 2, "texts": "用户尚未登录"}, 401);
     // 读取数据
@@ -73,13 +71,13 @@ app.use('/apply/', async (c) => {
 })
 
 // 获取订单 ###############################################################################
-app.use('/order/', async (c) => {
+app.use('/order/', async (c: Context): Promise<Response> => {
     if (c.req.method !== 'GET') return c.json({"flags": 1, "texts": "请求方式无效"}, 400);
     if (!await users.userAuth(c)) return c.json({"flags": 2, "texts": "用户尚未登录"}, 401);
     let order_uuid: string = <string>c.req.query('id'); // 用户邮件
     let order_acts: string = <string>c.req.query('op'); // 执行操作
     let order_push: string = <string>c.req.query('cd'); // 执行操作
-    let user_email: string | undefined = local.getCookie(c, 'mail');
+    let user_email: string | undefined = local.getCookie(c, 'mail')
     if (!order_uuid) return c.json({"flags": 5, "texts": "订单ID不存在"}, 401);
     if (!user_email) return c.json({"flags": 4, "texts": "用户尚未登录"}, 401);
     // 读取数据 ============================================================================
@@ -89,7 +87,7 @@ app.use('/order/', async (c) => {
             order_data = await saves.selectDB(c.env.DB_CF, "Apply", {
                 mail: {value: user_email}
             });
-            console.log(user_email, order_data)
+            // console.log(user_email, order_data)
         } else {
             order_data = await saves.selectDB(c.env.DB_CF, "Apply", {
                 uuid: {value: order_uuid},
@@ -131,10 +129,9 @@ app.use('/order/', async (c) => {
             } else if (order_acts === "rm_key") {
                 await saves.updateDB(c.env.DB_CF, "Apply", {keys: ""}, {uuid: order_uuid})
             } else if (order_acts === "ca_del") {
-
-            } else {
+                // todo 发起吊销
+            } else
                 return c.json({"flags": 5, "texts": "请求操作无效", "order": order_acts});
-            }
             return c.json({"flags": 0, "texts": "执行操作成功", "order": order_acts});
         }
     } catch (error) {
@@ -143,43 +140,99 @@ app.use('/order/', async (c) => {
 })
 
 // 用户注册 ###############################################################################
-app.get('/setup/', async (c) => {
+app.get('/setup/', async (c: Context): Promise<Response> => {
     return users.userRegs(c);
 })
 
 // 用户登录 ###############################################################################
-app.get('/login/', async (c) => {
+app.get('/login/', async (c: Context): Promise<Response> => {
     return users.userPost(c)
 })
 
-app.use('/check/', async (c) => {
+// 检查登录 ###############################################################################
+app.use('/check/', async (c: Context): Promise<Response> => {
     if (!await users.userAuth(c)) return c.json({"flags": 2, "texts": "用户尚未登录"}, 401);
     let user_email: string | undefined = local.getCookie(c, 'mail');
     return c.json({"flags": 0, "texts": user_email}, 200);
 })
 
 // 退出登录 ###############################################################################
-app.get('/exits/', async (c) => {
+app.get('/exits/', async (c: Context): Promise<Response> => {
     return users.userExit(c)
 })
 
 // 定时任务 ###############################################################################
-app.get('/tests/', async (c) => {
+app.get('/tests/', async (c: Context): Promise<Response> => {
     let result: any[] = await certs.Processing(c.env);
     return c.json(result)
 })
 
 // 定时任务 ###############################################################################
-app.get('/tasks/', async (c) => {
+app.get('/tasks/', async (c: Context): Promise<Response> => {
     let result: any[] = await certs.Processing(c.env);
     return c.json(result)
 })
 
-app.use('/clean/', async (c) => {
+// 更新密钥 ###############################################################################
+app.use('/acmes/', async (c: Context): Promise<Response> => {
+    if (c.req.method !== 'POST') return c.json({"flags": 1, "texts": "请求方式无效"}, 400);
+    if (!await users.userAuth(c)) return c.json({"flags": 2, "texts": "用户尚未登录"}, 401);
+    let user_email: string | undefined = local.getCookie(c, 'mail')
+    let privateKey: string = <string>(await c.req.json())['privateKey'];
+    await saves.updateDB(c.env.DB_CF, "Users", {keys: privateKey}, {mail: user_email})
+    return c.json({"flags": 0, "texts": "更新ACME密钥成功"}, 200)
+})
+
+// 删除账号 ###############################################################################
+app.use('/erase/', async (c: Context): Promise<Response> => {
+    if (c.req.method !== 'POST') return c.json({"flags": 1, "texts": "请求方式无效"}, 400);
+    if (!await users.userAuth(c)) return c.json({"flags": 2, "texts": "用户尚未登录"}, 401);
+    let user_email: string | undefined = local.getCookie(c, 'mail')
+    let post_email: string = <string>(await c.req.json())['email'];
+    if (user_email != post_email) return c.json({"flags": 5, "texts": "用户邮箱无效"}, 403);
+    await saves.deleteDB(c.env.DB_CF, "Apply", {mail: user_email})
+    await saves.deleteDB(c.env.DB_CF, "Users", {mail: user_email})
+    return c.json({"flags": 0, "texts": "删除账号成功"}, 200)
+})
+
+// 更新密钥 ###############################################################################
+app.use('/token/', async (c: Context): Promise<Response> => {
+    if (c.req.method !== 'POST') return c.json({"flags": 1, "texts": "请求方式无效"}, 400);
+    if (!await users.userAuth(c)) return c.json({"flags": 2, "texts": "用户尚未登录"}, 401);
+    let user_email: string | undefined = local.getCookie(c, 'mail')
+    let apis_token: string = <string>(await c.req.json())['privateKey'];
+    await saves.updateDB(c.env.DB_CF, "Users", {apis: apis_token}, {mail: user_email})
+    return c.json({"flags": 0, "texts": "更新API TOKEN密钥成功"}, 200)
+})
+
+// 定时任务 ###############################################################################
+app.use('/clean/', async (c: Context): Promise<Response> => {
     const result: Record<string, any> = await cleanDNS(c.env);
     return c.json({"flag": result.flag, "text": result.text})
 })
 
+// 获取证书 ###############################################################################
+app.use('/certs/:uuid', async (c: Context): Promise<Response> => {
+    const cert_uuid: string | undefined = c.req.param('uuid');
+    const api_token: string | undefined = c.req.query('keys');
+    if (cert_uuid === undefined || api_token === undefined)
+        return c.json({"flags": 1, "texts": "证书订单ID或密钥无效"}, 400);
+    const now_order: any = await saves.selectDB(
+        c.env.DB_CF, "Apply", {uuid: {value: cert_uuid}});
+    if (now_order.length == 0)
+        return c.json({"flags": 3, "texts": "证书订单ID或密钥无效"}, 400);
+    const now_email: string = now_order[0]['mail'];
+    const now_users: any = await saves.selectDB(
+        c.env.DB_CF, "Users", {mail: {value: now_email}});
+    if (now_users.length == 0 || now_users[0]['apis'] != api_token)
+        return c.json({"flags": 3, "texts": "证书订单ID或密钥无效"}, 400);
+    if (now_order[0].cert.length == 0 || now_order[0].keys.length == 0)
+        return c.json({"flags": 4, "texts": "此订单未完成或无密钥"}, 400);
+    return c.json({
+        "flags": 0, "texts": "证书密钥信息获取成功",
+        "cert": now_order[0].cert, "keys": now_order[0].keys
+    }, 200)
+})
 
-// app.use('/*', cors());
-export default app
+// 默认导出 ###############################################################################
+export default app;

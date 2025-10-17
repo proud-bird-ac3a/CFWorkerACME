@@ -1,4 +1,4 @@
-import {Hono} from 'hono'
+import {Context, Hono} from 'hono'
 import {opDomain} from "./certs";
 import {cleanDNS} from "./query";
 import * as users from './users';
@@ -17,23 +17,23 @@ export type Bindings = {
 export const app = new Hono<{ Bindings: Bindings }>()
 
 // 获取信息 ###############################################################################
-app.get('/users', async (c) => {
+app.get('/users/', async (c: Context): Promise<Response> => {
     return c.json({})
 });
 
 // 获取种子 ###############################################################################
-app.get('/nonce/', async (c) => {
+app.get('/nonce/', async (c: Context): Promise<Response> => {
     return await users.getNonce(c);
 });
 
 // 核查状态 ###############################################################################
-app.get('/panel/', async (c) => {
+app.get('/panel/', async (c: Context): Promise<Response> => {
     if (!await users.userAuth(c)) c.redirect("/login.html", 302);
     return c.redirect("/panel.html", 302);
 })
 
 // 申请证书 ###############################################################################
-app.use('/apply/', async (c) => {
+app.use('/apply/', async (c: Context): Promise<Response> => {
     if (c.req.method !== 'POST') return c.json({"flags": 1, "texts": "请求方式无效"}, 400);
     if (!await users.userAuth(c)) return c.json({"flags": 2, "texts": "用户尚未登录"}, 401);
     // 读取数据
@@ -71,7 +71,7 @@ app.use('/apply/', async (c) => {
 })
 
 // 获取订单 ###############################################################################
-app.use('/order/', async (c) => {
+app.use('/order/', async (c: Context): Promise<Response> => {
     if (c.req.method !== 'GET') return c.json({"flags": 1, "texts": "请求方式无效"}, 400);
     if (!await users.userAuth(c)) return c.json({"flags": 2, "texts": "用户尚未登录"}, 401);
     let order_uuid: string = <string>c.req.query('id'); // 用户邮件
@@ -140,41 +140,41 @@ app.use('/order/', async (c) => {
 })
 
 // 用户注册 ###############################################################################
-app.get('/setup/', async (c) => {
+app.get('/setup/', async (c: Context): Promise<Response> => {
     return users.userRegs(c);
 })
 
 // 用户登录 ###############################################################################
-app.get('/login/', async (c) => {
+app.get('/login/', async (c: Context): Promise<Response> => {
     return users.userPost(c)
 })
 
 // 检查登录 ###############################################################################
-app.use('/check/', async (c) => {
+app.use('/check/', async (c: Context): Promise<Response> => {
     if (!await users.userAuth(c)) return c.json({"flags": 2, "texts": "用户尚未登录"}, 401);
     let user_email: string | undefined = local.getCookie(c, 'mail');
     return c.json({"flags": 0, "texts": user_email}, 200);
 })
 
 // 退出登录 ###############################################################################
-app.get('/exits/', async (c) => {
+app.get('/exits/', async (c: Context): Promise<Response> => {
     return users.userExit(c)
 })
 
 // 定时任务 ###############################################################################
-app.get('/tests/', async (c) => {
+app.get('/tests/', async (c: Context): Promise<Response> => {
     let result: any[] = await certs.Processing(c.env);
     return c.json(result)
 })
 
 // 定时任务 ###############################################################################
-app.get('/tasks/', async (c) => {
+app.get('/tasks/', async (c: Context): Promise<Response> => {
     let result: any[] = await certs.Processing(c.env);
     return c.json(result)
 })
 
 // 更新密钥 ###############################################################################
-app.use('/acmes/', async (c) => {
+app.use('/acmes/', async (c: Context): Promise<Response> => {
     if (c.req.method !== 'POST') return c.json({"flags": 1, "texts": "请求方式无效"}, 400);
     if (!await users.userAuth(c)) return c.json({"flags": 2, "texts": "用户尚未登录"}, 401);
     let user_email: string | undefined = local.getCookie(c, 'mail')
@@ -184,7 +184,7 @@ app.use('/acmes/', async (c) => {
 })
 
 // 删除账号 ###############################################################################
-app.use('/erase/', async (c) => {
+app.use('/erase/', async (c: Context): Promise<Response> => {
     if (c.req.method !== 'POST') return c.json({"flags": 1, "texts": "请求方式无效"}, 400);
     if (!await users.userAuth(c)) return c.json({"flags": 2, "texts": "用户尚未登录"}, 401);
     let user_email: string | undefined = local.getCookie(c, 'mail')
@@ -196,7 +196,7 @@ app.use('/erase/', async (c) => {
 })
 
 // 更新密钥 ###############################################################################
-app.use('/token/', async (c) => {
+app.use('/token/', async (c: Context): Promise<Response> => {
     if (c.req.method !== 'POST') return c.json({"flags": 1, "texts": "请求方式无效"}, 400);
     if (!await users.userAuth(c)) return c.json({"flags": 2, "texts": "用户尚未登录"}, 401);
     let user_email: string | undefined = local.getCookie(c, 'mail')
@@ -205,8 +205,14 @@ app.use('/token/', async (c) => {
     return c.json({"flags": 0, "texts": "更新API TOKEN密钥成功"}, 200)
 })
 
+// 定时任务 ###############################################################################
+app.use('/clean/', async (c: Context): Promise<Response> => {
+    const result: Record<string, any> = await cleanDNS(c.env);
+    return c.json({"flag": result.flag, "text": result.text})
+})
+
 // 获取证书 ###############################################################################
-app.use('/certs/:uuid', async (c) => {
+app.use('/certs/:uuid', async (c: Context): Promise<Response> => {
     const cert_uuid: string | undefined = c.req.param('uuid');
     const api_token: string | undefined = c.req.query('keys');
     if (cert_uuid === undefined || api_token === undefined)
@@ -228,54 +234,6 @@ app.use('/certs/:uuid', async (c) => {
     }, 200)
 })
 
-// 定时任务 ##############################################################################
-app.use('/clean/', async (c) => {
-    const result: Record<string, any> = await cleanDNS(c.env);
-    return c.json({"flag": result.flag, "text": result.text})
-})
 
-
-// import xior from 'xior';
-//
-// app.use('/fetch/', async (c) => {
-//     try {
-//         const response = await fetch("https://acme-v02.api.letsencrypt.org/directory");
-//         const jsonData = await response.text();
-//         console.log('Request Data:', jsonData);
-//         return c.json({"flag": true, "data": jsonData})
-//     } catch (err) {
-//         console.error('Request Fail:', err);
-//         return c.json({"flag": false, "data": err})
-//     }
-// })
-//
-// app.use('/xiors/', async (c) => {
-//     let opts: Record<string, any> = {}
-//     opts['url'] = "https://acme-v02.api.letsencrypt.org/directory";
-//     opts["method"] = "GET";
-//     console.log("Request URLs: " + opts.url)
-//     try {
-//         let resp = await xior.request(opts);
-//         console.log("Request Data: " + resp)
-//         return c.json({"flag": true, "data": resp})
-//     } catch (err) {
-//         console.error("Request Fail: " + err);
-//         return c.json({"flag": false, "data": err})
-//     }
-// })
-//
-// app.use('/encry/', async (c) => {
-//     try {
-//         const response = await fetch("https://encrys.524228.xyz/directory");
-//         const jsonData = await response.json();
-//         console.log('Request Data:', jsonData);
-//         return c.json({"flag": true, "data": jsonData})
-//     } catch (err) {
-//         console.error('Request Fail:', err);
-//         return c.json({"flag": false, "data": err})
-//     }
-// })
-
-
-// 定时任务 ############################################################################################################
+// 默认导出 ###############################################################################
 export default app;
