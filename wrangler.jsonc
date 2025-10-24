@@ -33,7 +33,7 @@
   "d1_databases": [
     {
       "binding": "DB_CF",
-      "database_name": "",
+      "database_name": "DB_CF",
       "database_id": "<database-id>"
     }
   ],
