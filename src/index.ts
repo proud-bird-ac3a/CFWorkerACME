@@ -5,6 +5,8 @@ import * as users from './users';
 import * as saves from './saves';
 import * as certs from './certs';
 import * as local from "hono/cookie";
+import {serveStatic} from "hono/dist/types/adapter/cloudflare-workers";
+import manifest from "__STATIC_CONTENT_MANIFEST";
 
 // 绑定数据 ###############################################################################
 export type Bindings = {
@@ -234,6 +236,6 @@ app.use('/certs/:uuid', async (c: Context): Promise<Response> => {
     }, 200)
 })
 
-
+app.use("*", serveStatic({manifest: manifest, root: "./"}));
 // 默认导出 ###############################################################################
 export default app;
