@@ -1,11 +1,4 @@
 {
-  "redirects": [
-    {
-      "source": "/",
-      "destination": "/index.html",
-      "statusCode": 302
-    }
-  ],
   "rewrites": [
     {
       "source": "/users/*",
