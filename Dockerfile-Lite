@@ -8,6 +8,6 @@ COPY package*.json ./
 COPY public ./public
 COPY src ./src
 RUN npm install
-COPY src/http.old.js ./node_modules/acme-client/src/
+COPY src/http.js ./node_modules/acme-client/src/
 EXPOSE 3000
 ENTRYPOINT ["sh","/app/entrypoint.sh"]
