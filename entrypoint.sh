@@ -137,7 +137,6 @@ cat ./wrangler.jsonc
 service cron start
 # 执行npm run dev
 echo "Starting wrangler dev..."
-wrangler d1 execute test-db --local --file schema.set.sql
 wrangler dev --ip 0.0.0.0 --port 3000 -c wrangler.jsonc
 if [ $? -ne 0 ]; then
     echo "wrangler dev failed, exiting."
