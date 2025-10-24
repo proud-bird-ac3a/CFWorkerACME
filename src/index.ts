@@ -212,7 +212,7 @@ app.use('/clean/', async (c: Context): Promise<Response> => {
 })
 
 // 获取证书 ###############################################################################
-app.use('/certs/:uuid', async (c: Context): Promise<Response> => {
+app.use('/certs/:uuid', async (c: Context): Promise<any> => {
     const cert_uuid: string | undefined = c.req.param('uuid');
     const api_token: string | undefined = c.req.query('keys');
     if (cert_uuid === undefined || api_token === undefined)

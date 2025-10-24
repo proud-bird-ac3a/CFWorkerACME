@@ -1,8 +1,76 @@
 {
-    "rewrites": [
-        {
-            "source": "/",
-            "destination": "/index.html"
-        }
-    ]
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/users/*",
+      "destination": "/api/users/:splat"
+    },
+    {
+      "source": "/nonce/*",
+      "destination": "/api/nonce/:splat"
+    },
+    {
+      "source": "/panel/*",
+      "destination": "/api/panel/:splat"
+    },
+    {
+      "source": "/apply/*",
+      "destination": "/api/apply/:splat"
+    },
+    {
+      "source": "/order/*",
+      "destination": "/api/order/:splat"
+    },
+    {
+      "source": "/setup/*",
+      "destination": "/api/setup/:splat"
+    },
+    {
+      "source": "/login/*",
+      "destination": "/api/login/:splat"
+    },
+    {
+      "source": "/check/*",
+      "destination": "/api/check/:splat"
+    },
+    {
+      "source": "/exits/*",
+      "destination": "/api/exits/:splat"
+    },
+    {
+      "source": "/tests/*",
+      "destination": "/api/tests/:splat"
+    },
+    {
+      "source": "/tasks/*",
+      "destination": "/api/tasks/:splat"
+    },
+    {
+      "source": "/acmes/*",
+      "destination": "/api/acmes/:splat"
+    },
+    {
+      "source": "/erase/*",
+      "destination": "/api/erase/:splat"
+    },
+    {
+      "source": "/token/*",
+      "destination": "/api/token/:splat"
+    },
+    {
+      "source": "/users/*",
+      "destination": "/api/users/:splat"
+    },
+    {
+      "source": "/clean/*",
+      "destination": "/api/clean/:splat"
+    },
+    {
+      "source": "/certs/*",
+      "destination": "/api/certs/:splat"
+    }
+  ]
 }
