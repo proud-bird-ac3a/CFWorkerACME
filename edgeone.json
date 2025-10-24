@@ -1,10 +1,6 @@
 {
   "rewrites": [
     {
-      "source": "/",
-      "destination": "/index.html"
-    },
-    {
       "source": "/users/*",
       "destination": "/api/users/:splat"
     },
@@ -71,6 +67,10 @@
     {
       "source": "/certs/*",
       "destination": "/api/certs/:splat"
+    },
+    {
+      "source": "/",
+      "destination": "/index.html"
     }
   ]
 }
